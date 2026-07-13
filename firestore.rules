@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Validation Helpers ---
+
+    function isValidNotice(data) {
+      return data.keys().hasAll(['id', 'title', 'date', 'desc', 'type']) &&
+             data.keys().size() <= 6 &&
+             data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.date is string && data.date.size() <= 20 &&
+             data.desc is string && data.desc.size() <= 5000 &&
+             data.type is string && data.type.size() <= 50 &&
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 1000));
+    }
+
+    function isValidRule(data) {
+      return data.keys().hasAll(['id', 'category', 'question', 'keywords', 'synonyms', 'answer', 'relatedDepartment', 'priority', 'status']) &&
+             data.keys().size() == 9 &&
+             data.id is string &&
+             data.status in ['Active', 'Inactive'];
+    }
+
+    function isValidTicket(data) {
+      return data.keys().hasAll(['id', 'timestamp', 'email', 'phone', 'role', 'query', 'status']) &&
+             data.keys().size() <= 11 &&
+             data.status in ['Open', 'Resolved'] &&
+             data.email is string && data.email.size() <= 100 &&
+             data.query is string && data.query.size() <= 2000;
+    }
+
+    // --- Collections ---
+
+    match /admins/{adminId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /notices/{noticeId} {
+      allow read, write: if true; 
+    }
+
+    match /rules/{ruleId} {
+      allow read, write: if true; 
+    }
+
+    match /portalLinks/{linkId} {
+      allow read, write: if true;
+    }
+
+    match /departments/{deptId} {
+      allow read, write: if true;
+    }
+
+    match /faculty/{facultyId} {
+      allow read, write: if true;
+    }
+
+    match /categories/{catId} {
+      allow read, write: if true;
+    }
+
+    match /chatLogs/{logId} {
+      allow read, write: if true;
+    }
+
+    match /supportTickets/{ticketId} {
+      allow read, write: if true; 
+    }
+
+    match /websiteKnowledgeSettings/{id} {
+      allow read, write: if true;
+    }
+  }
+}

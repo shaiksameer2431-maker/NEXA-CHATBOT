@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "570499105074",
+    "project_id": "narayana-college-companion-app",
+    "storage_bucket": "narayana-college-companion-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:570499105074:android:16ff7daa91a3432c97972b",
+        "android_client_info": {
+          "package_name": "com.narayana.collegecompanion"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVdPoDS1K69TLjSPGe6XZRzzbPFNUnK1s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

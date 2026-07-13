@@ -1,0 +1,6 @@
+{
+  "name": "NECN Smart College Chatbot",
+  "description": "A production-grade rule-based chatbot for Narayana Engineering College, Nellore (NECN), featuring an Excel-driven knowledge base, keyword matching engine, and comprehensive admin dashboard.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

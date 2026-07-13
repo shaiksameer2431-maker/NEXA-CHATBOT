@@ -1,0 +1,133 @@
+{
+  "entities": {
+    "Notice": {
+      "title": "Notice",
+      "description": "College notices and announcements",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "desc": { "type": "string" },
+        "type": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["id", "title", "date", "desc", "type"]
+    },
+    "Rule": {
+      "title": "Rule",
+      "description": "Chatbot response rules",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "category": { "type": "string" },
+        "question": { "type": "string" },
+        "keywords": { "type": "string" },
+        "synonyms": { "type": "string" },
+        "answer": { "type": "string" },
+        "relatedDepartment": { "type": "string" },
+        "priority": { "type": "number" },
+        "status": { "type": "string", "enum": ["Active", "Inactive"] }
+      },
+      "required": ["id", "category", "question", "keywords", "synonyms", "answer", "relatedDepartment", "priority", "status"]
+    },
+    "PortalLink": {
+      "title": "PortalLink",
+      "description": "Links to college portals",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "link": { "type": "string" }
+      },
+      "required": ["id", "title", "link"]
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "User raised support tickets",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "studentName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string" },
+        "query": { "type": "string" },
+        "status": { "type": "string", "enum": ["Open", "Resolved"] },
+        "adminResponse": { "type": "string" },
+        "respondedAt": { "type": "string" },
+        "userNotified": { "type": "boolean" }
+      },
+      "required": ["id", "timestamp", "email", "phone", "role", "query", "status"]
+    },
+    "Department": {
+      "title": "Department",
+      "description": "College departments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "contactNumber": { "type": "string" },
+        "email": { "type": "string" },
+        "location": { "type": "string" }
+      },
+      "required": ["id", "name", "contactNumber", "email", "location"]
+    },
+    "Faculty": {
+      "title": "Faculty",
+      "description": "College faculty members",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "designation": { "type": "string" },
+        "department": { "type": "string" },
+        "email": { "type": "string" },
+        "contact": { "type": "string" }
+      },
+      "required": ["id", "name", "designation", "department", "email", "contact"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Rule categories",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "name", "description"]
+    }
+  },
+  "firestore": {
+    "notices": {
+      "schema": "Notice",
+      "description": "Collection of college notices"
+    },
+    "rules": {
+      "schema": "Rule",
+      "description": "Collection of chatbot rules"
+    },
+    "portalLinks": {
+      "schema": "PortalLink",
+      "description": "Collection of portal links"
+    },
+    "supportTickets": {
+      "schema": "SupportTicket",
+      "description": "Collection of support tickets"
+    },
+    "departments": {
+      "schema": "Department",
+      "description": "Collection of college departments"
+    },
+    "faculty": {
+      "schema": "Faculty",
+      "description": "Collection of college faculty"
+    },
+    "categories": {
+      "schema": "Category",
+      "description": "Collection of rule categories"
+    }
+  }
+}
