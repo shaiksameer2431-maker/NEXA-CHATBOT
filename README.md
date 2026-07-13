@@ -1,8 +1,8 @@
 <div align="center">
-
-<img width="<img width="825" height="520" alt="image" src="https://github.com/user-attachments/assets/014746e2-cc30-467c-8328-c3055cc389a6" />
-" />
-
-
-
+<img width="1200" height="475" alt="GHBanner" src="https://t4.ftcdn.net/jpg/06/00/28/17/360_F_600281716_rzh4YkugirCTIXphXCZHd16uAvC7up7t.jpg" />
 </div>
+
+
+
+View : https://necnchat.netlify.app/
+
