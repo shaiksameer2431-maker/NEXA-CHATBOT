@@ -4,5 +4,5 @@
 
 
 
-View : https://necnnexabot.netlify.app/
+View : https://necnchat.netlify.app/
 
