@@ -11,6 +11,11 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Helper to get no verified info warning
+  function getNoVerifiedInfoWarning() {
+    return "I couldn't find reliable information for your question in our current knowledge base. If you'd like, you can create a Support Ticket and a college administrator will review your request personally.";
+  }
+
   // Lazy initialize Gemini client
   let aiClient: GoogleGenAI | null = null;
   function getGeminiClient() {
@@ -197,127 +202,6 @@ async function startServer() {
     return results;
   }
 
-
-  // Helper to send real Email via Brevo API or other service if credentials exist
-  async function sendRealEmail(to: string, subject: string, textContent: string) {
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    
-    if (smtpPass && smtpPass.startsWith("xkeysib-")) {
-      console.log(`[BREVO EMAIL ROUTER] Detected Brevo API Key. Sending Email via REST API to: ${to}`);
-      try {
-        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-          method: "POST",
-          headers: {
-            "accept": "application/json",
-            "api-key": smtpPass,
-            "content-type": "application/json"
-          },
-          body: JSON.stringify({
-            sender: { name: "Narayana NEXA Helpdesk", email: smtpUser || "no-reply@narayana-nexa.edu" },
-            to: [{ email: to }],
-            subject: subject,
-            textContent: textContent
-          })
-        });
-        const resData = await response.json();
-        console.log(`[BREVO EMAIL SUCCESS]`, resData);
-        return true;
-      } catch (err) {
-        console.error(`[BREVO EMAIL ERROR]`, err);
-        return false;
-      }
-    }
-    
-    console.log(`[EMAIL ROUTER FALLBACK] No valid SMTP credentials found. Logged to console sandbox: [${to}]`);
-    return false;
-  }
-
-  // Helper to send real WhatsApp/SMS via Twilio API
-  async function sendRealTwilioNotification(phone: string, bodyText: string) {
-    const sid = process.env.TWILIO_ACCOUNT_SID;
-    const token = process.env.TWILIO_AUTH_TOKEN;
-    const from = process.env.TWILIO_FROM_PHONE;
-
-    if (sid && token && from) {
-      console.log(`[TWILIO ROUTER] Sending real Twilio Notification to: ${phone}`);
-      try {
-        const auth = Buffer.from(`${sid}:${token}`).toString("base64");
-        
-        let targetPhone = phone.trim();
-        if (!targetPhone.startsWith("+")) {
-          targetPhone = `+91${targetPhone}`; // Default to India country code
-        }
-
-        const isWhatsapp = from.startsWith("whatsapp:");
-        const to = isWhatsapp ? `whatsapp:${targetPhone}` : targetPhone;
-
-        const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-          method: "POST",
-          headers: {
-            "Authorization": `Basic ${auth}`,
-            "Content-Type": "application/x-www-form-urlencoded"
-          },
-          body: new URLSearchParams({
-            To: to,
-            From: from,
-            Body: bodyText
-          })
-        });
-
-        const resData = await response.json();
-        console.log(`[TWILIO SUCCESS]`, resData);
-        return true;
-      } catch (err) {
-        console.error(`[TWILIO ERROR]`, err);
-        return false;
-      }
-    }
-    
-    console.log(`[TWILIO ROUTER FALLBACK] No Twilio credentials found. Logged to console sandbox: [${phone}]`);
-    return false;
-  }
-
-  // Notification API endpoint
-  app.post("/api/notify", async (req, res) => {
-    const { ticketId, studentName, email, phone, status, adminResponse } = req.body;
-    
-    console.log(`[API NOTIFICATION TRIGGERED]`);
-    console.log(`Ticket ID: ${ticketId}`);
-    console.log(`Sending to: ${studentName}`);
-    
-    const emailSubject = `Narayana NEXA: Update on support ticket ${ticketId}`;
-    const emailBody = `Dear ${studentName || 'Student'},\n\nYour counseling support ticket (ID: ${ticketId}) status has been updated to: ${status}.\n\nCounselor Reply:\n"${adminResponse || 'No comments'}"\n\nBest regards,\nNarayana Engineering College Administration`;
-
-    const smsBody = `NEXA Support: Your ticket ${ticketId} is ${status}. Reply: ${adminResponse || 'Updated'}`;
-    const whatsappBody = `*Narayana NEXA Support*\n\nDear *${studentName || 'Student'}*,\n\nYour support ticket *${ticketId}* has been updated to *${status}*.\n\n*Counselor Reply*:\n_"${adminResponse || 'Processed'}"_\n\n_Thank you for reaching out to Narayana NEXA._`;
-
-    let emailTriggered = false;
-    let twilioTriggered = false;
-
-    if (email) {
-      console.log(`-> [SIMULATED EMAIL DISPATCH] Sent to: ${email}`);
-      console.log(`   Subject: ${emailSubject}`);
-      console.log(`   Body: ${emailBody}`);
-    }
-    
-    if (phone) {
-      console.log(`-> Initiating Twilio Outbound to: ${phone}`);
-      // Send Twilio notification (using the formatted WhatsApp template if twilio is set up with a whatsapp sender, otherwise falls back to SMS)
-      const from = process.env.TWILIO_FROM_PHONE || '';
-      const bodyText = from.startsWith('whatsapp:') ? whatsappBody : smsBody;
-      twilioTriggered = await sendRealTwilioNotification(phone, bodyText);
-    }
-    
-    res.json({ 
-      success: true, 
-      message: "Notifications dispatched",
-      details: {
-        email: "simulated",
-        phone: twilioTriggered ? "real" : "simulated"
-      }
-    });
-  });
 
   // Dynamic Rule-translation Gemini API Endpoint
   app.post("/api/translate-rules", async (req, res) => {
@@ -642,23 +526,45 @@ CREATE INDEX IF NOT EXISTS idx_website_indexed_content_domain ON website_indexed
   // Chat/Translation Gemini API Endpoint
   app.post("/api/chat", async (req, res) => {
     const { message, language, rules = [], chatHistory = [], supabaseUrl, supabaseKey, domain } = req.body;
+    const langName = language === 'te' ? 'Telugu (తెలుగు)' : language === 'hi' ? 'Hindi (हिन्दी)' : 'English';
+    const activeRules = rules.filter((r: any) => r.status === 'Active');
     if (!message) {
       return res.status(400).json({ error: "Message is required" });
     }
 
-    const activeRules = rules.filter((r: any) => r.status === 'Active');
-    const langName = language === 'te' ? 'Telugu (తెలుగు)' : language === 'hi' ? 'Hindi (हिन्दी)' : 'English';
+    // 1. Fetch website knowledge if domain provided
+    let websiteContext = "";
+    if (domain) {
+      try {
+        const supabase = getSupabaseClient(supabaseUrl, supabaseKey);
+        if (!supabase) throw new Error("Supabase not configured");
+        const { data: knowledge, error } = await supabase
+          .from("website_indexed_content")
+          .select("title, content")
+          .eq("domain", domain)
+          .textSearch("content", message)
+          .limit(3);
 
-    // Formulate the strict "no verified information found" warning in target language
-    const getNoVerifiedInfoWarning = () => {
-      if (language === 'te') {
-        return "క్షమించండి, ఈ అంశానికి సంబంధించి మా అధికారిక వెబ్‌సైట్ నాలెడ్జ్ బేస్‌లో ఎటువంటి ధృవీకరించబడిన సమాచారం కనుగొనబడలేదు. మీరు సహాయక టిక్కెట్‌ను నమోదు చేయవచ్చు, తద్వారా మా అడ్వైజర్ నేరుగా సమాధానం ఇస్తారు.";
-      } else if (language === 'hi') {
-        return "क्षमा करें, इस विषय के संबंध में हमारे आधिकारिक वेबसाइट ज्ञानकोश में कोई सत्यापित जानकारी नहीं मिली। आप सपोर्ट टिकट दर्ज कर सकते हैं ताकि हमारे सलाहकार सीधे उत्तर दे सकें।";
-      } else {
-        return "I'm sorry, but no verified information was found in our official website knowledge base regarding this topic. You can log an offline support ticket so our support desk counselor can reply to you directly.";
+        if (!error && knowledge && knowledge.length > 0) {
+          websiteContext = `WEBSITE KNOWLEDGE BASE:
+${knowledge.map(k => `Title: ${k.title}\nContent: ${k.content}`).join("\n\n")}`;
+          console.log(`[RAG] Retrieved ${knowledge.length} chunks for ${message}`);
+        }
+      } catch (err) {
+        console.error("[RAG] Supabase search error:", err);
       }
-    };
+    }
+
+    const prompt = `
+${websiteContext}
+
+You are an AI assistant for ${domain || "our website"}.
+Use the website knowledge provided above if relevant to answer the user's question. If the information is not in the knowledge base, use your own knowledge.
+${websiteContext ? "Always prioritize the provided website knowledge." : ""}
+
+User Message: ${message}
+Current Language: ${langName}
+`;
 
     // Helper to evaluate text matches on a list of rules
     const findBestRuleMatch = (rulesList: any[]) => {
@@ -745,7 +651,9 @@ CREATE INDEX IF NOT EXISTS idx_website_indexed_content_domain ON website_indexed
               let score = 0;
               const text = `${p.title} ${p.content}`.toLowerCase();
               for (const word of queryWords) {
-                if (text.includes(word)) score += 1;
+                // Count occurrences
+                const occurrences = (text.match(new RegExp(word, 'g')) || []).length;
+                score += occurrences;
               }
               return { ...p, score };
             }).filter(p => p.score > 0 || queryWords.length === 0);
@@ -792,6 +700,16 @@ ${crawledPagesContext}
                 });
 
                 const synthesizedReply = response.text || "";
+                const warning = getNoVerifiedInfoWarning();
+                
+                if (synthesizedReply.includes(warning)) {
+                  return res.json({
+                    text: synthesizedReply,
+                    isNoVerifiedWarning: true,
+                    source: "Website Crawled Content (No Match)"
+                  });
+                }
+
                 if (synthesizedReply.trim().length > 0) {
                   answerFound = true;
                   answerText = synthesizedReply;
